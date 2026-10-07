@@ -1,0 +1,19 @@
+default: backend
+
+projects:
+  - name: backend
+    path: ~/projects/backend
+    app: backend-app
+    profiles:
+      basic: [backend-app, backend-db]
+      queue: [backend-app, backend-db, backend-redis, backend-horizon]
+
+  - name: admin
+    path: ~/projects/frontend-admin
+
+  - name: client
+    path: ~/projects/frontend-client
+    files: [docker-compose.dev.yml]
+
+groups:
+  system: [backend, admin, client]

@@ -1,0 +1,4 @@
+bin/
+docker-manager
+docker-manager.yml
+docker-manager.yaml
