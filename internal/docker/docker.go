@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,6 +52,20 @@ func Run(dir string, args []string) error {
 		return fmt.Errorf("%s falhou: %w", Display(args), err)
 	}
 	return nil
+}
+
+func Output(dir string, args []string) ([]byte, error) {
+	cmd := exec.Command("docker", args...)
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+			return nil, fmt.Errorf("%s falhou: %s", Display(args), strings.TrimSpace(string(exitErr.Stderr)))
+		}
+		return nil, fmt.Errorf("%s falhou: %w", Display(args), err)
+	}
+	return out, nil
 }
 
 func Exec(dir string, args []string) error {

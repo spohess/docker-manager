@@ -68,7 +68,7 @@ Ordem de busca do arquivo quando `--config` não é informado:
 | comando | executa em cada projeto selecionado |
 | --- | --- |
 | `up` | `docker compose up -d <serviços do perfil>` |
-| `down` | `docker compose down`, em ordem reversa |
+| `down` | `docker compose down`, em ordem reversa, derrubando antes os projetos conectados às suas redes |
 | `stop` | `docker compose stop <serviços do perfil>`, em ordem reversa |
 | `restart` | `docker compose restart <serviços do perfil>` |
 | `ps` | `docker compose ps` |
@@ -81,7 +81,13 @@ todos os serviços. `-f`/`--full` ignora o perfil e `--profile=nome` escolhe
 outro (precisa existir em pelo menos um dos projetos selecionados).
 
 `up` segue a ordem da seleção (o backend sobe antes dos fronts que dependem da
-rede dele); `down` e `stop` seguem a ordem inversa. Os projetos são processados
+rede dele); `down` e `stop` seguem a ordem inversa.
+
+Antes de derrubar um projeto, o `down` procura containers de outros projetos
+compose (rodando ou parados) conectados às redes que ele cria e derruba esses
+projetos primeiro. Assim `dm down` no backend também remove os fronts que usam a
+rede dele como `external`, evitando que fiquem containers apontando para uma
+rede que será recriada com outro ID no próximo `up` (`network ... not found`). Os projetos são processados
 em sequência, o resumo final lista o resultado de cada um e o processo sai com
 código 1 se algum falhar.
 

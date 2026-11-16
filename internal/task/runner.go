@@ -37,13 +37,14 @@ type definition struct {
 	usesProfile bool
 	usesBuild   bool
 	reverse     bool
+	cascade     bool
 	batch       func(config.Project, Options) step
 	direct      func([]config.Project, Options) (target, error)
 }
 
 var definitions = []definition{
 	{name: "up", summary: "sobe os serviços do perfil (basic por padrão) com docker compose up -d", usesProfile: true, usesBuild: true, batch: upStep},
-	{name: "down", summary: "derruba os projetos com docker compose down, em ordem reversa", reverse: true, batch: downStep},
+	{name: "down", summary: "derruba os projetos com docker compose down, em ordem reversa, junto com os conectados às suas redes", reverse: true, cascade: true, batch: downStep},
 	{name: "stop", summary: "para os serviços do perfil, em ordem reversa", usesProfile: true, reverse: true, batch: stopStep},
 	{name: "restart", summary: "reinicia os serviços do perfil", usesProfile: true, batch: restartStep},
 	{name: "ps", summary: "lista os containers de cada projeto", batch: psStep},
@@ -157,6 +158,9 @@ func runBatch(def definition, selection config.Selection, opts Options) error {
 	results := make([]result, 0, len(projects))
 	for _, project := range projects {
 		ui.Project(project.Name, project.Path)
+		if def.cascade {
+			results = append(results, downDependents(project, opts.DryRun)...)
+		}
 		s := def.batch(project, opts)
 		err := runStep(project, s, opts.DryRun)
 		if err != nil {
@@ -171,14 +175,17 @@ func runStep(project config.Project, s step, dryRun bool) error {
 	if info, err := os.Stat(project.Path); err != nil || !info.IsDir() {
 		return fmt.Errorf("diretório inexistente: %s", project.Path)
 	}
-	args := docker.ComposeArgs(project.Files, s.args...)
+	return execute(project.Path, docker.ComposeArgs(project.Files, s.args...), dryRun)
+}
+
+func execute(dir string, args []string, dryRun bool) error {
 	line := docker.Display(args)
 	if dryRun {
 		ui.Skipped(line)
 		return nil
 	}
 	ui.Command(line)
-	return docker.Run(project.Path, args)
+	return docker.Run(dir, args)
 }
 
 func runDirect(def definition, projects []config.Project, opts Options) error {
